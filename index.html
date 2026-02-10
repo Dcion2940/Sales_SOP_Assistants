@@ -43,20 +43,26 @@
     <div id="root"></div>
     <script type="module">
       const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
-      const path = window.location.pathname;
       const projectBase = '/Sales_SOP_Assistants/';
       const projectDist = '/Sales_SOP_Assistants/dist/';
 
-      if (isGitHubPagesHost) {
-        const atRoot = path === '/' || path === '';
-        const inProject = path.startsWith(projectBase);
-        const inDist = path.startsWith(projectDist);
+      // normalize trailing slash: '/Sales_SOP_Assistants' -> '/Sales_SOP_Assistants/'
+      const normalizedPath = window.location.pathname.replace(/\/+$/, '/');
 
-        if (atRoot || (inProject && !inDist)) {
+      let shouldLoadApp = true;
+
+      if (isGitHubPagesHost) {
+        const inProject = normalizedPath === projectBase || normalizedPath.startsWith(projectBase);
+        const inDist = normalizedPath.startsWith(projectDist);
+
+        if (inProject && !inDist) {
+          shouldLoadApp = false;
           window.location.replace(projectDist);
         }
-      } else {
-        import('/index.tsx');
+      }
+
+      if (shouldLoadApp) {
+        import('./index.tsx');
       }
     </script>
 
