@@ -24,6 +24,8 @@
         .user-message .prose-custom ul, .user-message .prose-custom ol { color: white; }
         .user-message .prose-custom code { background-color: rgba(255,255,255,0.2); color: white; }
     </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
 <script type="importmap">
 {
   "imports": {
@@ -37,34 +39,10 @@
   }
 }
 </script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
+  <script type="module" crossorigin src="./assets/index-Cz1BQgsT.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module">
-      const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
-      const projectBase = '/Sales_SOP_Assistants/';
-      const projectDist = '/Sales_SOP_Assistants/dist/';
-
-      // normalize trailing slash: '/Sales_SOP_Assistants' -> '/Sales_SOP_Assistants/'
-      const normalizedPath = window.location.pathname.replace(/\/+$/, '/');
-
-      let shouldLoadApp = true;
-
-      if (isGitHubPagesHost) {
-        const inProject = normalizedPath === projectBase || normalizedPath.startsWith(projectBase);
-        const inDist = normalizedPath.startsWith(projectDist);
-
-        if (inProject && !inDist) {
-          shouldLoadApp = false;
-          window.location.replace(projectDist);
-        }
-      }
-
-      if (shouldLoadApp) {
-        import('./index.tsx');
-      }
-    </script>
 
 </body>
 </html>
