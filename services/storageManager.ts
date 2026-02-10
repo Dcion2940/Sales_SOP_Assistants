@@ -1,6 +1,7 @@
 
 import { SOPSection, ChatSession } from '../types';
 import { commitSOP } from './geminiService';
+import { API_BASE } from './apiConfig';
 
 const KEYS = {
   SOP_KNOWLEDGE: 'global_dept_sop_knowledge',
@@ -8,15 +9,13 @@ const KEYS = {
   CHAT_SESSIONS: 'global_dept_chat_sessions',
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-
 // In-Memory Cache
 let sopCache: SOPSection[] | null = null;
 let initPromise: Promise<void> | null = null;
 
 async function initSync() {
   try {
-    const response = await fetch(`${API_BASE_URL}/sop/current`);
+    const response = await fetch(`${API_BASE}/api/sop/blocks`);
     if (response.ok) {
       const data: SOPSection[] = await response.json();
       if (data && Array.isArray(data)) {

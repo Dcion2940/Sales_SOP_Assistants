@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: './',
+    base: '/Sales_SOP_Assistants/',
     build: {
       outDir: 'docs',
       emptyOutDir: true,
