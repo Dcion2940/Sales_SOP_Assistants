@@ -41,7 +41,16 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module">
+      const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
+      const isRootPath = window.location.pathname === '/' || window.location.pathname === '';
+
+      if (isGitHubPagesHost && isRootPath) {
+        window.location.replace('/Sales_SOP_Assistants/');
+      } else {
+        import('/index.tsx');
+      }
+    </script>
 
 </body>
 </html>
