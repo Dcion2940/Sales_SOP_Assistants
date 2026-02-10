@@ -24,6 +24,8 @@
         .user-message .prose-custom ul, .user-message .prose-custom ol { color: white; }
         .user-message .prose-custom code { background-color: rgba(255,255,255,0.2); color: white; }
     </style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
 <script type="importmap">
 {
   "imports": {
@@ -37,28 +39,10 @@
   }
 }
 </script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
+  <script type="module" crossorigin src="./assets/index-CLr-Bvuv.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module">
-      const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
-      const path = window.location.pathname;
-      const projectBase = '/Sales_SOP_Assistants/';
-      const projectDist = '/Sales_SOP_Assistants/dist/';
-
-      if (isGitHubPagesHost) {
-        const atRoot = path === '/' || path === '';
-        const inProject = path.startsWith(projectBase);
-        const inDist = path.startsWith(projectDist);
-
-        if (atRoot || (inProject && !inDist)) {
-          window.location.replace(projectDist);
-        }
-      } else {
-        import('/index.tsx');
-      }
-    </script>
 
 </body>
 </html>
