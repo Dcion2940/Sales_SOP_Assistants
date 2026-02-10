@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,6 +41,18 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-<script type="module" src="./index.tsx"></script>
+    <script type="module">
+      const isGitHubPages = window.location.hostname.endsWith('github.io');
+      const currentPath = window.location.pathname;
+      const pathParts = currentPath.split('/').filter(Boolean);
+      const inDocsPath = pathParts[pathParts.length - 1] === 'docs' || currentPath.includes('/docs/');
+
+      if (isGitHubPages && !inDocsPath) {
+        const basePath = currentPath.endsWith('/') ? currentPath : `${currentPath}/`;
+        window.location.replace(`${basePath}docs/`);
+      } else {
+        import('./index.tsx');
+      }
+    </script>
 </body>
 </html>
