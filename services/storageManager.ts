@@ -1,6 +1,13 @@
 
 import { SOPSection, ChatSession } from '../types';
 import { commitSOP } from './geminiService';
+import { API_BASE } from './apiConfig';
+
+
+function generateConversationId() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
 
 const KEYS = {
   SOP_KNOWLEDGE: 'global_dept_sop_knowledge',
@@ -8,15 +15,13 @@ const KEYS = {
   CHAT_SESSIONS: 'global_dept_chat_sessions',
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-
 // In-Memory Cache
 let sopCache: SOPSection[] | null = null;
 let initPromise: Promise<void> | null = null;
 
 async function initSync() {
   try {
-    const response = await fetch(`${API_BASE_URL}/sop/current`);
+    const response = await fetch(`${API_BASE}/api/sop/blocks`);
     if (response.ok) {
       const data: SOPSection[] = await response.json();
       if (data && Array.isArray(data)) {
@@ -72,7 +77,22 @@ export const StorageManager = {
 
   getSessions(): ChatSession[] | null {
     const data = localStorage.getItem(KEYS.CHAT_SESSIONS);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+
+    const parsed: ChatSession[] = JSON.parse(data);
+    let migrated = false;
+
+    const sessionsWithConversationId = parsed.map(session => {
+      if (session.conversationId) return session;
+      migrated = true;
+      return { ...session, conversationId: generateConversationId() };
+    });
+
+    if (migrated) {
+      localStorage.setItem(KEYS.CHAT_SESSIONS, JSON.stringify(sessionsWithConversationId));
+    }
+
+    return sessionsWithConversationId;
   },
 
   clearAll() {

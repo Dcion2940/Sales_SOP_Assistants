@@ -25,6 +25,7 @@ export interface ChatHistory {
 
 export interface ChatSession {
   id: string;
+  conversationId: string;
   title: string;
   timestamp: number;
   messages: Message[];

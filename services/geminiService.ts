@@ -1,22 +1,22 @@
 
 import { Message, ChatHistory, SOPSection, PendingSOP } from "../types";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+import { API_BASE } from './apiConfig';
 
 export async function sendMessageToBot(
   userInput: string,
   history: ChatHistory[],
   systemInstruction: string,
-  sopKnowledge: SOPSection[]
+  sopKnowledge: SOPSection[],
+  conversationId: string
 ): Promise<{ text: string; imageUrls: string[] }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/chat`, {
+    const response = await fetch(`${API_BASE}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        conversationId,
         userInput,
-        history,
-        systemInstruction // Note: Backend ignores this as per plan, but we send it for compatibility or logging if needed
+        history
       }),
     });
 
@@ -56,7 +56,7 @@ export async function sendMessageToBot(
 
 export async function parseSOPFile(base64Data: string, mimeType: string): Promise<PendingSOP> {
   try {
-    const response = await fetch(`${API_BASE_URL}/parse-sop`, {
+    const response = await fetch(`${API_BASE}/api/parse-sop`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ base64Data, mimeType }),
@@ -75,7 +75,7 @@ export async function parseSOPFile(base64Data: string, mimeType: string): Promis
 }
 
 export async function commitSOP(sections: SOPSection[]): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/sop/commit`, {
+  const response = await fetch(`${API_BASE}/api/sop/commit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sections }),
