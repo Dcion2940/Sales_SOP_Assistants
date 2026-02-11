@@ -2,6 +2,41 @@
 import { Message, ChatHistory, SOPSection, PendingSOP } from "../types";
 import { API_BASE } from './apiConfig';
 
+type BackendChatPayload = {
+  text?: unknown;
+  imageUrls?: unknown;
+};
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
+const normalizeImageUrls = (imageUrls: unknown): string[] => {
+  if (!Array.isArray(imageUrls)) return [];
+
+  return Array.from(
+    new Set(
+      imageUrls
+        .filter(isNonEmptyString)
+        .map(url => url.trim())
+    )
+  );
+};
+
+const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: string[] } => {
+  const rawPayload: BackendChatPayload | undefined = Array.isArray(payload)
+    ? payload[0]
+    : payload as BackendChatPayload;
+
+  if (!rawPayload || typeof rawPayload !== 'object') {
+    return { text: '', imageUrls: [] };
+  }
+
+  return {
+    text: isNonEmptyString(rawPayload.text) ? rawPayload.text : '',
+    imageUrls: normalizeImageUrls(rawPayload.imageUrls)
+  };
+};
+
 export async function sendMessageToBot(
   userInput: string,
   history: ChatHistory[],
@@ -25,7 +60,8 @@ export async function sendMessageToBot(
     }
 
     const data = await response.json();
-    const responseText = data.text;
+    const normalizedResponse = normalizeChatPayload(data);
+    const responseText = normalizedResponse.text;
 
     // Frontend Logic: Extract Images based on Keywords (as requested to keep)
     // The backend provides the context, so the model should output keywords.
@@ -46,7 +82,7 @@ export async function sendMessageToBot(
 
     return {
       text: responseText,
-      imageUrls: Array.from(new Set(foundImageUrls))
+      imageUrls: Array.from(new Set([...normalizedResponse.imageUrls, ...foundImageUrls]))
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -85,4 +121,3 @@ export async function commitSOP(sections: SOPSection[]): Promise<void> {
     throw new Error("Failed to commit SOP to backend");
   }
 }
-
