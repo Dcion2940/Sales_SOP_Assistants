@@ -6,13 +6,15 @@ export async function sendMessageToBot(
   userInput: string,
   history: ChatHistory[],
   systemInstruction: string,
-  sopKnowledge: SOPSection[]
+  sopKnowledge: SOPSection[],
+  conversationId: string
 ): Promise<{ text: string; imageUrls: string[] }> {
   try {
     const response = await fetch(`${API_BASE}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        conversationId,
         userInput,
         history
       }),

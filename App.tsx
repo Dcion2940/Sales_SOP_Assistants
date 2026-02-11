@@ -31,6 +31,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 
+
+function generateConversationId() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 const App: React.FC = () => {
   // --- Global State ---
   const [view, setView] = useState<'chat' | 'admin'>('chat');
@@ -85,6 +91,7 @@ const App: React.FC = () => {
     } else {
       const newSession: ChatSession = {
         id: crypto.randomUUID(),
+        conversationId: generateConversationId(),
         title: '新對話',
         timestamp: Date.now(),
         messages: [{ role: 'assistant', text: '您好！我是國外部 SOP 助手。請問今天能幫您什麼？' }],
@@ -146,7 +153,7 @@ const App: React.FC = () => {
     }));
 
     setIsLoading(true);
-    const result = await sendMessageToBot(currentInput, activeSession.history, systemInstruction, sopKnowledge);
+    const result = await sendMessageToBot(currentInput, activeSession.history, systemInstruction, sopKnowledge, activeSession.conversationId);
     
     const botMessage: Message = { role: 'assistant', text: result.text, imageUrls: result.imageUrls };
 
@@ -779,7 +786,7 @@ const App: React.FC = () => {
         </div>
         <div className="px-4 mb-4">
           <button onClick={() => {
-            const newSession: ChatSession = { id: crypto.randomUUID(), title: '新對話', timestamp: Date.now(), messages: [{ role: 'assistant', text: '您好！我是國外部 SOP 助手。請問有什麼可以幫您的？' }], history: [] };
+            const newSession: ChatSession = { id: crypto.randomUUID(), conversationId: generateConversationId(), title: '新對話', timestamp: Date.now(), messages: [{ role: 'assistant', text: '您好！我是國外部 SOP 助手。請問有什麼可以幫您的？' }], history: [] };
             setSessions([newSession, ...sessions]);
             setActiveSessionId(newSession.id);
           }} className="w-full py-2.5 px-4 bg-indigo-50 text-indigo-700 rounded-xl font-medium text-sm flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all border border-indigo-100">

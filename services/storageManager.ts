@@ -3,6 +3,12 @@ import { SOPSection, ChatSession } from '../types';
 import { commitSOP } from './geminiService';
 import { API_BASE } from './apiConfig';
 
+
+function generateConversationId() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 const KEYS = {
   SOP_KNOWLEDGE: 'global_dept_sop_knowledge',
   SYSTEM_INSTRUCTION: 'global_dept_system_instruction',
@@ -71,7 +77,22 @@ export const StorageManager = {
 
   getSessions(): ChatSession[] | null {
     const data = localStorage.getItem(KEYS.CHAT_SESSIONS);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+
+    const parsed: ChatSession[] = JSON.parse(data);
+    let migrated = false;
+
+    const sessionsWithConversationId = parsed.map(session => {
+      if (session.conversationId) return session;
+      migrated = true;
+      return { ...session, conversationId: generateConversationId() };
+    });
+
+    if (migrated) {
+      localStorage.setItem(KEYS.CHAT_SESSIONS, JSON.stringify(sessionsWithConversationId));
+    }
+
+    return sessionsWithConversationId;
   },
 
   clearAll() {
