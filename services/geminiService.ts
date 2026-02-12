@@ -78,7 +78,7 @@ const normalizeImageUrls = (imageUrls: unknown): string[] => {
     }
 
     try {
-      const origin = new URL(trimTrailingSlash(API_BASE)).origin;
+      const origin = trimTrailingSlash(API_BASE);
       return new URL(trimmed, `${origin}/`).toString();
     } catch {
       return trimmed;
