@@ -1,6 +1,19 @@
 import { ChatHistory, SOPSection, PendingSOP } from "../types";
 import { API_BASE } from './apiConfig';
 
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
+
+const getChatEndpoints = (): string[] => {
+  const base = trimTrailingSlash(API_BASE);
+  const apiRoute = `${base}/api/chat`;
+
+  if (/\/webhook(\/|$)/i.test(base)) {
+    return [base, apiRoute];
+  }
+
+  return [apiRoute, base];
+};
+
 type BackendChatPayload = {
   text?: unknown;
   imageUrls?: unknown;
@@ -79,18 +92,34 @@ export async function sendMessageToBot(
   conversationId: string
 ): Promise<{ text: string; imageUrls: string[] }> {
   try {
-    const response = await fetch(`${API_BASE}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        userInput,
-        history
-      }),
-    });
+    let response: Response | null = null;
+    let lastError: unknown = null;
 
-    if (!response.ok) {
-      throw new Error(`Backend Error: ${response.statusText}`);
+    for (const endpoint of getChatEndpoints()) {
+      try {
+        const candidate = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId,
+            userInput,
+            history
+          }),
+        });
+
+        if (candidate.ok) {
+          response = candidate;
+          break;
+        }
+
+        lastError = new Error(`Backend Error: ${candidate.status} ${candidate.statusText}`);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!response) {
+      throw lastError instanceof Error ? lastError : new Error('Backend Error: Unable to reach chat endpoint');
     }
 
     const data = await response.json();

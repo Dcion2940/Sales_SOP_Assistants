@@ -50,7 +50,7 @@ gcloud run deploy $SERVICE_NAME \
 
 if [ $? -eq 0 ]; then
     echo "✅ Backend Deployed Successfully!"
-    echo "Now update your frontend .env (VITE_API_BASE_URL) with the Service URL provided above."
+    echo "Now update your frontend .env (VITE_API_BASE (or VITE_API_BASE_URL)) with the Service URL provided above."
 else
     echo "❌ Deployment failed."
 fi
