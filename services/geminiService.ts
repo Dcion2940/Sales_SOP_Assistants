@@ -1,39 +1,73 @@
-
-import { Message, ChatHistory, SOPSection, PendingSOP } from "../types";
+import { ChatHistory, SOPSection, PendingSOP } from "../types";
 import { API_BASE } from './apiConfig';
 
 type BackendChatPayload = {
   text?: unknown;
   imageUrls?: unknown;
+  imageUrl?: unknown;
+  output?: unknown;
+  data?: unknown;
 };
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
+const parseJsonIfString = (payload: unknown): unknown => {
+  if (!isNonEmptyString(payload)) return payload;
+
+  const trimmed = payload.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+    return payload;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return payload;
+  }
+};
+
 const normalizeImageUrls = (imageUrls: unknown): string[] => {
-  if (!Array.isArray(imageUrls)) return [];
+  const normalized = Array.isArray(imageUrls)
+    ? imageUrls
+    : isNonEmptyString(imageUrls)
+      ? [imageUrls]
+      : [];
 
   return Array.from(
     new Set(
-      imageUrls
+      normalized
         .filter(isNonEmptyString)
         .map(url => url.trim())
     )
   );
 };
 
-const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: string[] } => {
-  const rawPayload: BackendChatPayload | undefined = Array.isArray(payload)
-    ? payload[0]
-    : payload as BackendChatPayload;
+const toPayloadObject = (value: unknown): BackendChatPayload | undefined => {
+  if (!value || typeof value !== 'object') return undefined;
+  return value as BackendChatPayload;
+};
 
-  if (!rawPayload || typeof rawPayload !== 'object') {
+const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: string[] } => {
+  const parsedPayload = parseJsonIfString(payload);
+
+  const rootPayload = Array.isArray(parsedPayload)
+    ? toPayloadObject(parsedPayload[0])
+    : toPayloadObject(parsedPayload);
+
+  const nestedPayload = toPayloadObject(parseJsonIfString(rootPayload?.output ?? rootPayload?.data));
+  const finalPayload = nestedPayload || rootPayload;
+
+  if (!finalPayload) {
     return { text: '', imageUrls: [] };
   }
 
+  const imageUrls = normalizeImageUrls(finalPayload.imageUrls);
+  const singleImageUrls = normalizeImageUrls(finalPayload.imageUrl);
+
   return {
-    text: isNonEmptyString(rawPayload.text) ? rawPayload.text : '',
-    imageUrls: normalizeImageUrls(rawPayload.imageUrls)
+    text: isNonEmptyString(finalPayload.text) ? finalPayload.text.trim() : '',
+    imageUrls: Array.from(new Set([...imageUrls, ...singleImageUrls]))
   };
 };
 
