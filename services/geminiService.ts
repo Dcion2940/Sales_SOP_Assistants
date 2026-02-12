@@ -41,17 +41,56 @@ const parseJsonIfString = (payload: unknown): unknown => {
 };
 
 const normalizeImageUrls = (imageUrls: unknown): string[] => {
-  const normalized = Array.isArray(imageUrls)
-    ? imageUrls
-    : isNonEmptyString(imageUrls)
-      ? [imageUrls]
-      : [];
+  const parsed = parseJsonIfString(imageUrls);
+
+  const collectUrls = (value: unknown): string[] => {
+    if (!value) return [];
+
+    if (Array.isArray(value)) return value.flatMap(collectUrls);
+
+    if (typeof value === 'object') {
+      const obj = value as any;
+      // common formats: { url }, { imageUrl }, { image_url: { url } }, { imageUrl: { url } }
+      return collectUrls(
+        obj.url ??
+        obj.imageUrl ??
+        obj.image_url?.url ??
+        obj.imageUrl?.url ??
+        obj.imageUrls ??
+        []
+      );
+    }
+
+    if (typeof value === 'string') return [value];
+
+    return [];
+  };
+
+  const toAbsoluteIfRelative = (url: string): string => {
+    const trimmed = url.trim();
+
+    if (
+      /^(https?:)?\/\//.test(trimmed) ||
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('blob:')
+    ) {
+      return trimmed;
+    }
+
+    try {
+      const origin = new URL(trimTrailingSlash(API_BASE)).origin;
+      return new URL(trimmed, `${origin}/`).toString();
+    } catch {
+      return trimmed;
+    }
+  };
 
   return Array.from(
     new Set(
-      normalized
+      collectUrls(parsed)
         .filter(isNonEmptyString)
-        .map(url => url.trim())
+        .map(toAbsoluteIfRelative)
+        .filter(isNonEmptyString)
     )
   );
 };
