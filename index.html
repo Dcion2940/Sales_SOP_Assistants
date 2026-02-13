@@ -43,15 +43,24 @@
     <div id="root"></div>
     <script type="module">
       const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
+      const projectRootNoSlash = '/Sales_SOP_Assistants';
       const projectBase = '/Sales_SOP_Assistants/';
+      const projectDistNoSlash = '/Sales_SOP_Assistants/dist';
       const projectDist = '/Sales_SOP_Assistants/dist/';
-      const normalizedPath = window.location.pathname.replace(/\/+$/, '/');
+      const path = window.location.pathname;
 
-      // `/dist` is a legacy path and may serve stale assets.
-      // Normalize users back to the project root so latest deployment is loaded.
-      if (isGitHubPagesHost && normalizedPath.startsWith(projectDist)) {
-        const nextPath = normalizedPath.replace(projectDist, projectBase);
-        window.location.replace(nextPath + window.location.search + window.location.hash);
+      if (isGitHubPagesHost) {
+        // Ensure base path has trailing slash; otherwise relative module imports resolve incorrectly.
+        if (path === projectRootNoSlash) {
+          window.location.replace(projectBase + window.location.search + window.location.hash);
+        } else if (path === projectDistNoSlash || path.startsWith(projectDist)) {
+          // `/dist` is a legacy path and may serve stale assets; send users back to project root.
+          const nextPath = path.replace(projectDistNoSlash, projectRootNoSlash);
+          const withSlash = nextPath.endsWith('/') ? nextPath : `${nextPath}/`;
+          window.location.replace(withSlash + window.location.search + window.location.hash);
+        } else {
+          import('./index.tsx');
+        }
       } else {
         import('./index.tsx');
       }
