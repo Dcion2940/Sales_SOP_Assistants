@@ -49,6 +49,11 @@ type BackendChatPayload = {
   images?: unknown;
   imageUrl?: unknown;
   image_url?: unknown;
+  image?: unknown;
+  images_url?: unknown;
+  attachments?: unknown;
+  attachmentUrls?: unknown;
+  media?: unknown;
   output?: unknown;
   data?: unknown;
 };
@@ -92,6 +97,12 @@ const normalizeImageUrls = (imageUrls: unknown): string[] => {
         obj.imageUrls ??
         obj.image_urls ??
         obj.images ??
+        obj.image ??
+        obj.images_url ??
+        obj.attachmentUrls ??
+        obj.attachments ??
+        obj.media ??
+        obj.href ??
         []
       );
     }
@@ -218,6 +229,10 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
   const images = normalizeImageUrls(finalPayload.images);
   const singleImageUrls = normalizeImageUrls(finalPayload.imageUrl);
   const snakeCaseSingleImage = normalizeImageUrls(finalPayload.image_url);
+  const legacyImage = normalizeImageUrls(finalPayload.image);
+  const attachments = normalizeImageUrls(finalPayload.attachments);
+  const attachmentUrls = normalizeImageUrls(finalPayload.attachmentUrls);
+  const media = normalizeImageUrls(finalPayload.media);
   const text = isNonEmptyString(finalPayload.text) ? finalPayload.text.trim() : '';
 
   // Fallback for n8n/custom payloads where text/image fields are nested deeply.
@@ -227,7 +242,7 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
     .find(isNonEmptyString);
   const nestedImageUrls = flattenedObjects.flatMap((obj) =>
     normalizeImageUrls(
-      obj.imageUrls ?? obj.image_urls ?? obj.images ?? obj.imageUrl ?? obj.image_url
+      obj.imageUrls ?? obj.image_urls ?? obj.images ?? obj.imageUrl ?? obj.image_url ?? obj.image ?? obj.attachments ?? obj.attachmentUrls ?? obj.media ?? obj.images_url
     )
   );
 
@@ -245,6 +260,10 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
         ...images,
         ...singleImageUrls,
         ...snakeCaseSingleImage,
+        ...legacyImage,
+        ...attachments,
+        ...attachmentUrls,
+        ...media,
         ...nestedImageUrls,
         ...imageUrlsFromText,
         ...imageUrlsFromAnyString
@@ -259,7 +278,7 @@ export async function sendMessageToBot(
   systemInstruction: string,
   sopKnowledge: SOPSection[],
   conversationId: string
-): Promise<{ text: string; imageUrls: string[]; debugInfo?: { endpoint?: string; rawResponse?: string; normalizedImageUrls?: string[] } }> {
+): Promise<{ text: string; imageUrls: string[]; debugInfo?: { endpoint?: string; rawResponse?: string; normalizedImageUrls?: string[]; imageUrlEchoText?: string } }> {
   try {
     let response: Response | null = null;
     let resolvedEndpoint: string | undefined;
@@ -320,13 +339,14 @@ export async function sendMessageToBot(
         ? {
             endpoint: resolvedEndpoint,
             rawResponse,
-            normalizedImageUrls: finalImageUrls
+            normalizedImageUrls: finalImageUrls,
+            imageUrlEchoText: finalImageUrls.length > 0 ? finalImageUrls.join('\n') : '(no image urls parsed)'
           }
         : undefined
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: RUNTIME_DEBUG_ENABLED ? { endpoint: undefined, rawResponse: String(error), normalizedImageUrls: [] } : undefined };
+    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: RUNTIME_DEBUG_ENABLED ? { endpoint: undefined, rawResponse: String(error), normalizedImageUrls: [], imageUrlEchoText: '(error)' } : undefined };
   }
 }
 

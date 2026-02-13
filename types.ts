@@ -20,6 +20,7 @@ export interface Message {
     endpoint?: string;
     rawResponse?: string;
     normalizedImageUrls?: string[];
+    imageUrlEchoText?: string;
   };
 }
 
