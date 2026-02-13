@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Message, ChatHistory, SOPSection, ChatSession, PendingSOP, SOPImage, PendingSOPSection } from './types';
 import { SOP_KNOWLEDGE as INITIAL_SOP, SYSTEM_INSTRUCTION as INITIAL_SYSTEM } from './constants';
 import { sendMessageToBot, parseSOPFile } from './services/geminiService';
+import { RUNTIME_DEBUG_ENABLED } from './services/apiConfig';
 import { StorageManager } from './services/storageManager';
 import { 
   BuildingOfficeIcon, 
@@ -856,7 +857,7 @@ const App: React.FC = () => {
                       ))}
                     </div>
                   )}
-                  {msg.role === 'assistant' && import.meta.env.DEV && msg.debugInfo && (
+                  {msg.role === 'assistant' && RUNTIME_DEBUG_ENABLED && msg.debugInfo && (
                     <details className="text-xs rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900">
                       <summary className="cursor-pointer font-semibold">Debug: webhook response</summary>
                       <div className="mt-2 space-y-2">

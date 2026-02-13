@@ -1,7 +1,7 @@
 
 import { SOPSection, ChatSession } from '../types';
 import { commitSOP } from './geminiService';
-import { API_BASE } from './apiConfig';
+import { API_BASE, isWebhookBase } from './apiConfig';
 
 
 function generateConversationId() {
@@ -20,6 +20,8 @@ let sopCache: SOPSection[] | null = null;
 let initPromise: Promise<void> | null = null;
 
 async function initSync() {
+  if (isWebhookBase(API_BASE)) return;
+
   try {
     const response = await fetch(`${API_BASE}/api/sop/current`);
     if (response.ok) {
@@ -51,6 +53,8 @@ export const StorageManager = {
     localStorage.setItem(KEYS.SOP_KNOWLEDGE, JSON.stringify(data));
 
     // 2. Commit to Backend (Background)
+    if (isWebhookBase(API_BASE)) return;
+
     commitSOP(data).catch(err => {
       console.error("Background Commit Failed:", err);
     });

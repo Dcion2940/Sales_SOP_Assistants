@@ -1,5 +1,5 @@
 import { ChatHistory, SOPSection, PendingSOP } from "../types";
-import { API_BASE } from './apiConfig';
+import { API_BASE, RUNTIME_DEBUG_ENABLED, isWebhookBase } from './apiConfig';
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
 
@@ -15,7 +15,7 @@ const getChatEndpoints = (): string[] => {
 };
 
 
-const isWebhookEndpoint = (endpoint: string): boolean => /\/webhook(\/|$)/i.test(endpoint);
+const isWebhookEndpoint = (endpoint: string): boolean => isWebhookBase(endpoint);
 
 const parseResponseBody = async (response: Response): Promise<{ raw: string; parsed: unknown }> => {
   const raw = await response.text();
@@ -133,8 +133,8 @@ const normalizeImageUrls = (imageUrls: unknown): string[] => {
 const extractImageUrlsFromText = (text: string): string[] => {
   if (!isNonEmptyString(text)) return [];
 
-  const urls = text.match(/https?:\/\/[^\s)\]\"]+/gi) || [];
-  return urls.filter((url) => /\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i.test(url));
+  const urls = text.match(/https?:\/\/[^\s)\]\">]+/gi) || [];
+  return urls.filter((url) => !/\.(js|css|map|json|pdf|txt)(\?|#|$)/i.test(url));
 };
 
 const flattenObjects = (input: unknown): Record<string, unknown>[] => {
@@ -159,6 +159,33 @@ const flattenObjects = (input: unknown): Record<string, unknown>[] => {
   }
 
   return objects;
+};
+
+
+const collectAllStrings = (input: unknown): string[] => {
+  const queue: unknown[] = [parseJsonIfString(input)];
+  const strings: string[] = [];
+
+  while (queue.length > 0) {
+    const current = parseJsonIfString(queue.shift());
+    if (current == null) continue;
+
+    if (typeof current === 'string') {
+      strings.push(current);
+      continue;
+    }
+
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+
+    if (typeof current === 'object') {
+      queue.push(...Object.values(current as Record<string, unknown>));
+    }
+  }
+
+  return strings;
 };
 
 const toPayloadObject = (value: unknown): BackendChatPayload | undefined => {
@@ -200,6 +227,7 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
 
   const resolvedText = text || (isNonEmptyString(fallbackText) ? fallbackText.trim() : '');
   const imageUrlsFromText = extractImageUrlsFromText(resolvedText);
+  const imageUrlsFromAnyString = collectAllStrings(parsedPayload).flatMap(extractImageUrlsFromText);
 
   return {
     text: resolvedText,
@@ -211,7 +239,8 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
         ...singleImageUrls,
         ...snakeCaseSingleImage,
         ...nestedImageUrls,
-        ...imageUrlsFromText
+        ...imageUrlsFromText,
+        ...imageUrlsFromAnyString
       ])
     )
   };
@@ -279,7 +308,7 @@ export async function sendMessageToBot(
     return {
       text: responseText,
       imageUrls: finalImageUrls,
-      debugInfo: import.meta.env.DEV
+      debugInfo: RUNTIME_DEBUG_ENABLED
         ? {
             endpoint: resolvedEndpoint,
             rawResponse,
@@ -289,7 +318,7 @@ export async function sendMessageToBot(
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: import.meta.env.DEV ? { endpoint: undefined, rawResponse: String(error), normalizedImageUrls: [] } : undefined };
+    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: RUNTIME_DEBUG_ENABLED ? { endpoint: undefined, rawResponse: String(error), normalizedImageUrls: [] } : undefined };
   }
 }
 
