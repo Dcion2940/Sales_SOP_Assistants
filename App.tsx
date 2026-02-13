@@ -857,26 +857,27 @@ const App: React.FC = () => {
                       ))}
                     </div>
                   )}
-                  {msg.role === 'assistant' && msg.imageUrls && msg.imageUrls.length > 0 && (
+                  {msg.role === 'assistant' && (
                     <details className="text-xs rounded-lg border border-slate-200 bg-slate-50 p-2 text-slate-700">
-                      <summary className="cursor-pointer font-semibold">收到的 imageUrls（除錯）</summary>
-                      <ul className="mt-2 list-disc pl-5 space-y-1 break-all">
-                        {msg.imageUrls.map((url, i) => (
-                          <li key={`url-${i}`}>
-                            <a href={url} target="_blank" rel="noreferrer" className="text-indigo-600 underline">{url}</a>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
-                  {msg.role === 'assistant' && RUNTIME_DEBUG_ENABLED && msg.debugInfo && (
-                    <details className="text-xs rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900">
-                      <summary className="cursor-pointer font-semibold">Debug: webhook response</summary>
+                      <summary className="cursor-pointer font-semibold">圖片回應診斷</summary>
                       <div className="mt-2 space-y-2">
-                        <div><span className="font-semibold">Endpoint:</span> {msg.debugInfo.endpoint || 'N/A'}</div>
-                        <div><span className="font-semibold">Parsed image count:</span> {msg.debugInfo.normalizedImageUrls?.length || 0}</div>
-                        <div><span className="font-semibold">Image URL echo:</span> {msg.debugInfo.imageUrlEchoText || '(none)'}</div>
-                        <pre className="whitespace-pre-wrap break-all bg-white border border-amber-100 rounded p-2">{msg.debugInfo.rawResponse || '(empty)'}</pre>
+                        <div><span className="font-semibold">Parsed image count:</span> {msg.debugInfo?.normalizedImageUrls?.length || msg.imageUrls?.length || 0}</div>
+                        <div><span className="font-semibold">Endpoint:</span> {msg.debugInfo?.endpoint || 'N/A'}</div>
+                        <div><span className="font-semibold">Image URL echo:</span> {msg.debugInfo?.imageUrlEchoText || '(no image urls parsed)'}</div>
+                        {msg.imageUrls && msg.imageUrls.length > 0 ? (
+                          <ul className="mt-2 list-disc pl-5 space-y-1 break-all">
+                            {msg.imageUrls.map((url, i) => (
+                              <li key={`url-${i}`}>
+                                <a href={url} target="_blank" rel="noreferrer" className="text-indigo-600 underline">{url}</a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-slate-500">此回覆未解析出 imageUrls。</p>
+                        )}
+                        {RUNTIME_DEBUG_ENABLED && (
+                          <pre className="whitespace-pre-wrap break-all bg-white border border-amber-100 rounded p-2">{msg.debugInfo?.rawResponse || '(debug raw disabled)'}</pre>
+                        )}
                       </div>
                     </details>
                   )}

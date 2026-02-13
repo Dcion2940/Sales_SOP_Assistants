@@ -359,18 +359,16 @@ export async function sendMessageToBot(
     return {
       text: responseText,
       imageUrls: finalImageUrls,
-      debugInfo: RUNTIME_DEBUG_ENABLED
-        ? {
-            endpoint: resolvedEndpoint,
-            rawResponse,
-            normalizedImageUrls: finalImageUrls,
-            imageUrlEchoText: finalImageUrls.length > 0 ? finalImageUrls.join('\n') : '(no image urls parsed)'
-          }
-        : undefined
+      debugInfo: {
+        endpoint: resolvedEndpoint,
+        rawResponse: RUNTIME_DEBUG_ENABLED ? rawResponse : undefined,
+        normalizedImageUrls: finalImageUrls,
+        imageUrlEchoText: finalImageUrls.length > 0 ? finalImageUrls.join('\n') : '(no image urls parsed)'
+      }
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: RUNTIME_DEBUG_ENABLED ? { endpoint: undefined, rawResponse: String(error), normalizedImageUrls: [], imageUrlEchoText: '(error)' } : undefined };
+    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: { endpoint: undefined, rawResponse: RUNTIME_DEBUG_ENABLED ? String(error) : undefined, normalizedImageUrls: [], imageUrlEchoText: '(error)' } };
   }
 }
 
