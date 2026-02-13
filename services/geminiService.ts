@@ -17,9 +17,9 @@ const getChatEndpoints = (): string[] => {
 
 const isWebhookEndpoint = (endpoint: string): boolean => /\/webhook(\/|$)/i.test(endpoint);
 
-const parseResponseBody = async (response: Response): Promise<unknown> => {
+const parseResponseBody = async (response: Response): Promise<{ raw: string; parsed: unknown }> => {
   const raw = await response.text();
-  return parseJsonIfString(raw);
+  return { raw, parsed: parseJsonIfString(raw) };
 };
 
 const postChatPayload = async (
@@ -223,9 +223,10 @@ export async function sendMessageToBot(
   systemInstruction: string,
   sopKnowledge: SOPSection[],
   conversationId: string
-): Promise<{ text: string; imageUrls: string[] }> {
+): Promise<{ text: string; imageUrls: string[]; debugInfo?: { endpoint?: string; rawResponse?: string; normalizedImageUrls?: string[] } }> {
   try {
     let response: Response | null = null;
+    let resolvedEndpoint: string | undefined;
     let lastError: unknown = null;
 
     for (const endpoint of getChatEndpoints()) {
@@ -238,6 +239,7 @@ export async function sendMessageToBot(
 
         if (candidate.ok) {
           response = candidate;
+          resolvedEndpoint = endpoint;
           break;
         }
 
@@ -251,8 +253,8 @@ export async function sendMessageToBot(
       throw lastError instanceof Error ? lastError : new Error('Backend Error: Unable to reach chat endpoint');
     }
 
-    const data = await parseResponseBody(response);
-    const normalizedResponse = normalizeChatPayload(data);
+    const { raw: rawResponse, parsed: parsedResponse } = await parseResponseBody(response);
+    const normalizedResponse = normalizeChatPayload(parsedResponse);
     const responseText = normalizedResponse.text;
 
     // Frontend Logic: Extract Images based on Keywords (as requested to keep)
@@ -272,13 +274,22 @@ export async function sendMessageToBot(
       });
     });
 
+    const finalImageUrls = Array.from(new Set([...normalizedResponse.imageUrls, ...foundImageUrls]));
+
     return {
       text: responseText,
-      imageUrls: Array.from(new Set([...normalizedResponse.imageUrls, ...foundImageUrls]))
+      imageUrls: finalImageUrls,
+      debugInfo: import.meta.env.DEV
+        ? {
+            endpoint: resolvedEndpoint,
+            rawResponse,
+            normalizedImageUrls: finalImageUrls
+          }
+        : undefined
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return { text: "系統錯誤，請確認網路連線。", imageUrls: [] };
+    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: import.meta.env.DEV ? { endpoint: undefined, rawResponse: String(error), normalizedImageUrls: [] } : undefined };
   }
 }
 

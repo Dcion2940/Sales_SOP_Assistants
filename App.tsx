@@ -155,7 +155,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     const result = await sendMessageToBot(currentInput, activeSession.history, systemInstruction, sopKnowledge, activeSession.conversationId);
     
-    const botMessage: Message = { role: 'assistant', text: result.text, imageUrls: result.imageUrls };
+    const botMessage: Message = { role: 'assistant', text: result.text, imageUrls: result.imageUrls, debugInfo: result.debugInfo };
 
     setSessions(prev => prev.map(s => {
       if (s.id === activeSessionId) {
@@ -855,6 +855,16 @@ const App: React.FC = () => {
                         </div>
                       ))}
                     </div>
+                  )}
+                  {msg.role === 'assistant' && import.meta.env.DEV && msg.debugInfo && (
+                    <details className="text-xs rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900">
+                      <summary className="cursor-pointer font-semibold">Debug: webhook response</summary>
+                      <div className="mt-2 space-y-2">
+                        <div><span className="font-semibold">Endpoint:</span> {msg.debugInfo.endpoint || 'N/A'}</div>
+                        <div><span className="font-semibold">Parsed image count:</span> {msg.debugInfo.normalizedImageUrls?.length || 0}</div>
+                        <pre className="whitespace-pre-wrap break-all bg-white border border-amber-100 rounded p-2">{msg.debugInfo.rawResponse || '(empty)'}</pre>
+                      </div>
+                    </details>
                   )}
                 </div>
               </div>

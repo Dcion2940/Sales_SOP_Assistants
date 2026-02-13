@@ -16,6 +16,11 @@ export interface Message {
   role: 'user' | 'assistant';
   text: string;
   imageUrls?: string[];
+  debugInfo?: {
+    endpoint?: string;
+    rawResponse?: string;
+    normalizedImageUrls?: string[];
+  };
 }
 
 export interface ChatHistory {
