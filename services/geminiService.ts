@@ -287,9 +287,10 @@ export async function sendMessageToBot(
   systemInstruction: string,
   sopKnowledge: SOPSection[],
   conversationId: string
-): Promise<{ text: string; imageUrls: string[]; debugInfo?: { endpoint?: string; rawResponse?: string; normalizedImageUrls?: string[]; imageUrlEchoText?: string } }> {
+): Promise<{ text: string; imageUrls: string[]; debugInfo?: { endpoint?: string; rawResponse?: string; normalizedImageUrls?: string[]; imageUrlEchoText?: string; probeReport?: string } }> {
   try {
     const candidates: ChatResponseCandidate[] = [];
+    const probeRows: string[] = [];
     let resolvedEndpoint: string | undefined;
     let lastError: unknown = null;
 
@@ -303,12 +304,14 @@ export async function sendMessageToBot(
 
         if (!response.ok) {
           lastError = new Error(`Backend Error: ${response.status} ${response.statusText}`);
+          probeRows.push(`${endpoint} -> HTTP ${response.status}`);
           continue;
         }
 
         const { raw: rawResponse, parsed: parsedResponse } = await parseResponseBody(response);
         const normalized = normalizeChatPayload(parsedResponse);
         candidates.push({ endpoint, rawResponse, normalized });
+        probeRows.push(`${endpoint} -> ok, images=${normalized.imageUrls.length}, text=${normalized.text.length}`);
 
         // Prefer candidate with explicit image URLs, otherwise keep probing fallback endpoints.
         if (normalized.imageUrls.length > 0) {
@@ -316,6 +319,7 @@ export async function sendMessageToBot(
         }
       } catch (error) {
         lastError = error;
+        probeRows.push(`${endpoint} -> fetch error`);
       }
     }
 
@@ -363,12 +367,13 @@ export async function sendMessageToBot(
         endpoint: resolvedEndpoint,
         rawResponse: RUNTIME_DEBUG_ENABLED ? rawResponse : undefined,
         normalizedImageUrls: finalImageUrls,
-        imageUrlEchoText: finalImageUrls.length > 0 ? finalImageUrls.join('\n') : '(no image urls parsed)'
+        imageUrlEchoText: finalImageUrls.length > 0 ? finalImageUrls.join('\n') : '(no image urls parsed)',
+        probeReport: probeRows.join('\n')
       }
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: { endpoint: undefined, rawResponse: RUNTIME_DEBUG_ENABLED ? String(error) : undefined, normalizedImageUrls: [], imageUrlEchoText: '(error)' } };
+    return { text: "系統錯誤，請確認網路連線。", imageUrls: [], debugInfo: { endpoint: undefined, rawResponse: RUNTIME_DEBUG_ENABLED ? String(error) : undefined, normalizedImageUrls: [], imageUrlEchoText: '(error)', probeReport: 'no-success-endpoint' } };
   }
 }
 

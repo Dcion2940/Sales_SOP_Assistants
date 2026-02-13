@@ -864,6 +864,9 @@ const App: React.FC = () => {
                         <div><span className="font-semibold">Parsed image count:</span> {msg.debugInfo?.normalizedImageUrls?.length || msg.imageUrls?.length || 0}</div>
                         <div><span className="font-semibold">Endpoint:</span> {msg.debugInfo?.endpoint || 'N/A'}</div>
                         <div><span className="font-semibold">Image URL echo:</span> {msg.debugInfo?.imageUrlEchoText || '(no image urls parsed)'}</div>
+                        <div><span className="font-semibold">Probe report:</span></div>
+                        <pre className="whitespace-pre-wrap break-all bg-white border border-slate-200 rounded p-2">{msg.debugInfo?.probeReport || 'legacy-message-or-missing-debug-info'}</pre>
+                        {!msg.debugInfo && <p className="text-slate-500">此訊息可能為舊版前端建立（尚未附帶 debugInfo）。</p>}
                         {msg.imageUrls && msg.imageUrls.length > 0 ? (
                           <ul className="mt-2 list-disc pl-5 space-y-1 break-all">
                             {msg.imageUrls.map((url, i) => (

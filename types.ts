@@ -21,6 +21,7 @@ export interface Message {
     rawResponse?: string;
     normalizedImageUrls?: string[];
     imageUrlEchoText?: string;
+    probeReport?: string;
   };
 }
 
