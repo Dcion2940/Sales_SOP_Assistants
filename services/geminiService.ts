@@ -8,7 +8,8 @@ const getChatEndpoints = (): string[] => {
   const apiRoute = `${base}/api/chat`;
 
   if (/\/webhook(\/|$)/i.test(base)) {
-    return [base, apiRoute];
+    // Prefer backend-style route first; some deployments expose richer payload on /api/chat
+    return [apiRoute, base];
   }
 
   return [apiRoute, base];
@@ -26,19 +27,21 @@ const postChatPayload = async (
   endpoint: string,
   payload: { conversationId: string; userInput: string; history: ChatHistory[] }
 ): Promise<Response> => {
-  // n8n webhook often rejects CORS preflight for application/json.
-  // Use a simple request for webhook endpoints to avoid OPTIONS preflight.
-  if (isWebhookEndpoint(endpoint)) {
+  // Use JSON for backend-style /api/chat routes (needed by Express json parser),
+  // and fallback to simple request for raw webhook endpoints to reduce preflight risk.
+  const isApiChatRoute = /\/api\/chat(\?|$)/i.test(endpoint);
+
+  if (isApiChatRoute || !isWebhookEndpoint(endpoint)) {
     return fetch(endpoint, {
       method: 'POST',
-      body: JSON.stringify(payload)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
   }
 
   return fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   });
 };
 
