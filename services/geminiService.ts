@@ -275,6 +275,12 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
   };
 };
 
+type ChatResponseCandidate = {
+  endpoint: string;
+  rawResponse: string;
+  normalized: { text: string; imageUrls: string[] };
+};
+
 export async function sendMessageToBot(
   userInput: string,
   history: ChatHistory[],
@@ -283,36 +289,51 @@ export async function sendMessageToBot(
   conversationId: string
 ): Promise<{ text: string; imageUrls: string[]; debugInfo?: { endpoint?: string; rawResponse?: string; normalizedImageUrls?: string[]; imageUrlEchoText?: string } }> {
   try {
-    let response: Response | null = null;
+    const candidates: ChatResponseCandidate[] = [];
     let resolvedEndpoint: string | undefined;
     let lastError: unknown = null;
 
     for (const endpoint of getChatEndpoints()) {
       try {
-        const candidate = await postChatPayload(endpoint, {
+        const response = await postChatPayload(endpoint, {
           conversationId,
           userInput,
           history
         });
 
-        if (candidate.ok) {
-          response = candidate;
-          resolvedEndpoint = endpoint;
-          break;
+        if (!response.ok) {
+          lastError = new Error(`Backend Error: ${response.status} ${response.statusText}`);
+          continue;
         }
 
-        lastError = new Error(`Backend Error: ${candidate.status} ${candidate.statusText}`);
+        const { raw: rawResponse, parsed: parsedResponse } = await parseResponseBody(response);
+        const normalized = normalizeChatPayload(parsedResponse);
+        candidates.push({ endpoint, rawResponse, normalized });
+
+        // Prefer candidate with explicit image URLs, otherwise keep probing fallback endpoints.
+        if (normalized.imageUrls.length > 0) {
+          break;
+        }
       } catch (error) {
         lastError = error;
       }
     }
 
-    if (!response) {
+    if (candidates.length === 0) {
       throw lastError instanceof Error ? lastError : new Error('Backend Error: Unable to reach chat endpoint');
     }
 
-    const { raw: rawResponse, parsed: parsedResponse } = await parseResponseBody(response);
-    const normalizedResponse = normalizeChatPayload(parsedResponse);
+    const bestCandidate = candidates
+      .slice()
+      .sort((a, b) => {
+        const byImages = b.normalized.imageUrls.length - a.normalized.imageUrls.length;
+        if (byImages !== 0) return byImages;
+        return b.normalized.text.length - a.normalized.text.length;
+      })[0];
+
+    resolvedEndpoint = bestCandidate.endpoint;
+    const rawResponse = bestCandidate.rawResponse;
+    const normalizedResponse = bestCandidate.normalized;
     const responseText = normalizedResponse.text;
     const rawResponseImageUrls = extractImageUrlsFromText(rawResponse);
 
