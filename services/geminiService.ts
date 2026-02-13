@@ -1,10 +1,10 @@
 import { ChatHistory, SOPSection, PendingSOP } from "../types";
-import { API_BASE, RUNTIME_DEBUG_ENABLED, isWebhookBase } from './apiConfig';
+import { CHAT_API_BASE, SOP_API_BASE, RUNTIME_DEBUG_ENABLED, isWebhookBase } from './apiConfig';
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
 
 const getChatEndpoints = (): string[] => {
-  const base = trimTrailingSlash(API_BASE);
+  const base = trimTrailingSlash(CHAT_API_BASE);
   const apiRoute = `${base}/api/chat`;
 
   if (/\/webhook(\/|$)/i.test(base)) {
@@ -113,7 +113,7 @@ const normalizeImageUrls = (imageUrls: unknown): string[] => {
     }
 
     try {
-      const origin = trimTrailingSlash(API_BASE);
+      const origin = trimTrailingSlash(CHAT_API_BASE);
       return new URL(trimmed, `${origin}/`).toString();
     } catch {
       return trimmed;
@@ -292,6 +292,7 @@ export async function sendMessageToBot(
     const { raw: rawResponse, parsed: parsedResponse } = await parseResponseBody(response);
     const normalizedResponse = normalizeChatPayload(parsedResponse);
     const responseText = normalizedResponse.text;
+    const rawResponseImageUrls = extractImageUrlsFromText(rawResponse);
 
     // Frontend Logic: Extract Images based on Keywords (as requested to keep)
     // The backend provides the context, so the model should output keywords.
@@ -310,7 +311,7 @@ export async function sendMessageToBot(
       });
     });
 
-    const finalImageUrls = Array.from(new Set([...normalizedResponse.imageUrls, ...foundImageUrls]));
+    const finalImageUrls = Array.from(new Set([...normalizedResponse.imageUrls, ...rawResponseImageUrls, ...foundImageUrls]));
 
     return {
       text: responseText,
@@ -331,11 +332,11 @@ export async function sendMessageToBot(
 
 export async function parseSOPFile(base64Data: string, mimeType: string): Promise<PendingSOP> {
   try {
-    if (isWebhookBase(API_BASE)) {
-      throw new Error('目前 API_BASE 指向 webhook，無法使用 SOP 後台解析功能。請設定 VITE_API_BASE 為後端 API 網址。');
+    if (!SOP_API_BASE || isWebhookBase(SOP_API_BASE)) {
+      throw new Error('目前未設定可用的 SOP API 後端。請設定 VITE_SOP_API_BASE (或 VITE_BACKEND_API_BASE)。');
     }
 
-    const response = await fetch(`${API_BASE}/api/parse-sop`, {
+    const response = await fetch(`${SOP_API_BASE}/api/parse-sop`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ base64Data, mimeType }),
@@ -354,9 +355,9 @@ export async function parseSOPFile(base64Data: string, mimeType: string): Promis
 }
 
 export async function commitSOP(sections: SOPSection[]): Promise<void> {
-  if (isWebhookBase(API_BASE)) return;
+  if (!SOP_API_BASE || isWebhookBase(SOP_API_BASE)) return;
 
-  const response = await fetch(`${API_BASE}/api/sop/commit`, {
+  const response = await fetch(`${SOP_API_BASE}/api/sop/commit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sections }),
