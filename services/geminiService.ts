@@ -17,7 +17,10 @@ const getChatEndpoints = (): string[] => {
 type BackendChatPayload = {
   text?: unknown;
   imageUrls?: unknown;
+  image_urls?: unknown;
+  images?: unknown;
   imageUrl?: unknown;
+  image_url?: unknown;
   output?: unknown;
   data?: unknown;
 };
@@ -53,10 +56,14 @@ const normalizeImageUrls = (imageUrls: unknown): string[] => {
       // common formats: { url }, { imageUrl }, { image_url: { url } }, { imageUrl: { url } }
       return collectUrls(
         obj.url ??
+        obj.src ??
         obj.imageUrl ??
+        obj.image_url ??
         obj.image_url?.url ??
         obj.imageUrl?.url ??
         obj.imageUrls ??
+        obj.image_urls ??
+        obj.images ??
         []
       );
     }
@@ -95,6 +102,37 @@ const normalizeImageUrls = (imageUrls: unknown): string[] => {
   );
 };
 
+const extractImageUrlsFromText = (text: string): string[] => {
+  if (!isNonEmptyString(text)) return [];
+
+  const urls = text.match(/https?:\/\/[^\s)\]\"]+/gi) || [];
+  return urls.filter((url) => /\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i.test(url));
+};
+
+const flattenObjects = (input: unknown): Record<string, unknown>[] => {
+  const queue: unknown[] = [parseJsonIfString(input)];
+  const objects: Record<string, unknown>[] = [];
+
+  while (queue.length > 0) {
+    const current = parseJsonIfString(queue.shift());
+
+    if (!current) continue;
+
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+
+    if (typeof current === 'object') {
+      const obj = current as Record<string, unknown>;
+      objects.push(obj);
+      queue.push(...Object.values(obj));
+    }
+  }
+
+  return objects;
+};
+
 const toPayloadObject = (value: unknown): BackendChatPayload | undefined => {
   if (!value || typeof value !== 'object') return undefined;
   return value as BackendChatPayload;
@@ -115,11 +153,39 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
   }
 
   const imageUrls = normalizeImageUrls(finalPayload.imageUrls);
+  const snakeCaseImageUrls = normalizeImageUrls(finalPayload.image_urls);
+  const images = normalizeImageUrls(finalPayload.images);
   const singleImageUrls = normalizeImageUrls(finalPayload.imageUrl);
+  const snakeCaseSingleImage = normalizeImageUrls(finalPayload.image_url);
+  const text = isNonEmptyString(finalPayload.text) ? finalPayload.text.trim() : '';
+
+  // Fallback for n8n/custom payloads where text/image fields are nested deeply.
+  const flattenedObjects = flattenObjects(parsedPayload);
+  const fallbackText = flattenedObjects
+    .map((obj) => obj.text)
+    .find(isNonEmptyString);
+  const nestedImageUrls = flattenedObjects.flatMap((obj) =>
+    normalizeImageUrls(
+      obj.imageUrls ?? obj.image_urls ?? obj.images ?? obj.imageUrl ?? obj.image_url
+    )
+  );
+
+  const resolvedText = text || (isNonEmptyString(fallbackText) ? fallbackText.trim() : '');
+  const imageUrlsFromText = extractImageUrlsFromText(resolvedText);
 
   return {
-    text: isNonEmptyString(finalPayload.text) ? finalPayload.text.trim() : '',
-    imageUrls: Array.from(new Set([...imageUrls, ...singleImageUrls]))
+    text: resolvedText,
+    imageUrls: Array.from(
+      new Set([
+        ...imageUrls,
+        ...snakeCaseImageUrls,
+        ...images,
+        ...singleImageUrls,
+        ...snakeCaseSingleImage,
+        ...nestedImageUrls,
+        ...imageUrlsFromText
+      ])
+    )
   };
 };
 
