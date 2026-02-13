@@ -21,8 +21,13 @@ let initPromise: Promise<void> | null = null;
 
 async function initSync() {
   try {
-    const response = await fetch(`${API_BASE}/api/sop/blocks`);
+    const response = await fetch(`${API_BASE}/api/sop/current`);
     if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return;
+      }
+
       const data: SOPSection[] = await response.json();
       if (data && Array.isArray(data)) {
         sopCache = data;

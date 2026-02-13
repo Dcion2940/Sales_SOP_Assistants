@@ -14,6 +14,34 @@ const getChatEndpoints = (): string[] => {
   return [apiRoute, base];
 };
 
+
+const isWebhookEndpoint = (endpoint: string): boolean => /\/webhook(\/|$)/i.test(endpoint);
+
+const parseResponseBody = async (response: Response): Promise<unknown> => {
+  const raw = await response.text();
+  return parseJsonIfString(raw);
+};
+
+const postChatPayload = async (
+  endpoint: string,
+  payload: { conversationId: string; userInput: string; history: ChatHistory[] }
+): Promise<Response> => {
+  // n8n webhook often rejects CORS preflight for application/json.
+  // Use a simple request for webhook endpoints to avoid OPTIONS preflight.
+  if (isWebhookEndpoint(endpoint)) {
+    return fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+};
+
 type BackendChatPayload = {
   text?: unknown;
   imageUrls?: unknown;
@@ -202,14 +230,10 @@ export async function sendMessageToBot(
 
     for (const endpoint of getChatEndpoints()) {
       try {
-        const candidate = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId,
-            userInput,
-            history
-          }),
+        const candidate = await postChatPayload(endpoint, {
+          conversationId,
+          userInput,
+          history
         });
 
         if (candidate.ok) {
@@ -227,7 +251,7 @@ export async function sendMessageToBot(
       throw lastError instanceof Error ? lastError : new Error('Backend Error: Unable to reach chat endpoint');
     }
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
     const normalizedResponse = normalizeChatPayload(data);
     const responseText = normalizedResponse.text;
 
