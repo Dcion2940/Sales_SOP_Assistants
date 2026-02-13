@@ -45,23 +45,14 @@
       const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
       const projectBase = '/Sales_SOP_Assistants/';
       const projectDist = '/Sales_SOP_Assistants/dist/';
-
-      // normalize trailing slash: '/Sales_SOP_Assistants' -> '/Sales_SOP_Assistants/'
       const normalizedPath = window.location.pathname.replace(/\/+$/, '/');
 
-      let shouldLoadApp = true;
-
-      if (isGitHubPagesHost) {
-        const inProject = normalizedPath === projectBase || normalizedPath.startsWith(projectBase);
-        const inDist = normalizedPath.startsWith(projectDist);
-
-        if (inProject && !inDist) {
-          shouldLoadApp = false;
-          window.location.replace(projectDist);
-        }
-      }
-
-      if (shouldLoadApp) {
+      // `/dist` is a legacy path and may serve stale assets.
+      // Normalize users back to the project root so latest deployment is loaded.
+      if (isGitHubPagesHost && normalizedPath.startsWith(projectDist)) {
+        const nextPath = normalizedPath.replace(projectDist, projectBase);
+        window.location.replace(nextPath + window.location.search + window.location.hash);
+      } else {
         import('./index.tsx');
       }
     </script>
