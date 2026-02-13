@@ -41,30 +41,7 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module">
-      const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
-      const projectRootNoSlash = '/Sales_SOP_Assistants';
-      const projectBase = '/Sales_SOP_Assistants/';
-      const projectDistNoSlash = '/Sales_SOP_Assistants/dist';
-      const projectDist = '/Sales_SOP_Assistants/dist/';
-      const path = window.location.pathname;
-
-      if (isGitHubPagesHost) {
-        // Ensure base path has trailing slash; otherwise relative module imports resolve incorrectly.
-        if (path === projectRootNoSlash) {
-          window.location.replace(projectBase + window.location.search + window.location.hash);
-        } else if (path === projectDistNoSlash || path.startsWith(projectDist)) {
-          // `/dist` is a legacy path and may serve stale assets; send users back to project root.
-          const nextPath = path.replace(projectDistNoSlash, projectRootNoSlash);
-          const withSlash = nextPath.endsWith('/') ? nextPath : `${nextPath}/`;
-          window.location.replace(withSlash + window.location.search + window.location.hash);
-        } else {
-          import('./index.tsx');
-        }
-      } else {
-        import('./index.tsx');
-      }
-    </script>
+    <script type="module" src="./index.tsx"></script>
 
 </body>
 </html>
