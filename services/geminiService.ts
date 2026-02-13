@@ -193,6 +193,12 @@ const toPayloadObject = (value: unknown): BackendChatPayload | undefined => {
   return value as BackendChatPayload;
 };
 
+
+const pickTextFromObject = (obj: Record<string, unknown>): string | undefined => {
+  const candidates = [obj.text, obj.message, obj.answer, obj.content, obj.outputText];
+  return candidates.find(isNonEmptyString) as string | undefined;
+};
+
 const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: string[] } => {
   const parsedPayload = parseJsonIfString(payload);
 
@@ -217,7 +223,7 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
   // Fallback for n8n/custom payloads where text/image fields are nested deeply.
   const flattenedObjects = flattenObjects(parsedPayload);
   const fallbackText = flattenedObjects
-    .map((obj) => obj.text)
+    .map((obj) => pickTextFromObject(obj))
     .find(isNonEmptyString);
   const nestedImageUrls = flattenedObjects.flatMap((obj) =>
     normalizeImageUrls(
@@ -225,7 +231,8 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
     )
   );
 
-  const resolvedText = text || (isNonEmptyString(fallbackText) ? fallbackText.trim() : '');
+  const firstStringText = collectAllStrings(parsedPayload).find((value) => value.includes('http') || value.length > 20);
+  const resolvedText = text || (isNonEmptyString(fallbackText) ? fallbackText.trim() : '') || (isNonEmptyString(firstStringText) ? firstStringText.trim() : '');
   const imageUrlsFromText = extractImageUrlsFromText(resolvedText);
   const imageUrlsFromAnyString = collectAllStrings(parsedPayload).flatMap(extractImageUrlsFromText);
 
@@ -324,6 +331,10 @@ export async function sendMessageToBot(
 
 export async function parseSOPFile(base64Data: string, mimeType: string): Promise<PendingSOP> {
   try {
+    if (isWebhookBase(API_BASE)) {
+      throw new Error('目前 API_BASE 指向 webhook，無法使用 SOP 後台解析功能。請設定 VITE_API_BASE 為後端 API 網址。');
+    }
+
     const response = await fetch(`${API_BASE}/api/parse-sop`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -343,6 +354,8 @@ export async function parseSOPFile(base64Data: string, mimeType: string): Promis
 }
 
 export async function commitSOP(sections: SOPSection[]): Promise<void> {
+  if (isWebhookBase(API_BASE)) return;
+
   const response = await fetch(`${API_BASE}/api/sop/commit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
