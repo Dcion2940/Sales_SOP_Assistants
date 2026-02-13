@@ -26,6 +26,16 @@
     </style>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
+    <script>
+      (function () {
+        const isGh = window.location.hostname === 'dcion2940.github.io';
+        const rootA = '/Sales_SOP_Assistants';
+        const rootB = '/Sales_SOP_Assistants/';
+        if (isGh && (window.location.pathname === rootA || window.location.pathname === rootB)) {
+          window.location.replace('/Sales_SOP_Assistants/dist/' + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
 <script type="importmap">
 {
   "imports": {
@@ -39,7 +49,8 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="./assets/index-DZNByi1L.js"></script>
+  <script type="module" crossorigin src="./assets/index-CXONvPTv.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-ZdF75MCn.css">
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
