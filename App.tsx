@@ -859,7 +859,7 @@ const App: React.FC = () => {
                   )}
                   {msg.role === 'assistant' && (
                     <details className="text-xs rounded-lg border border-slate-200 bg-slate-50 p-2 text-slate-700">
-                      <summary className="cursor-pointer font-semibold">圖片回應診斷</summary>
+                      <summary className="cursor-pointer font-semibold">圖片回應診斷（僅採用 imageUrls）</summary>
                       <div className="mt-2 space-y-2">
                         <div><span className="font-semibold">Parsed image count:</span> {msg.debugInfo?.normalizedImageUrls?.length || msg.imageUrls?.length || 0}</div>
                         <div><span className="font-semibold">Endpoint:</span> {msg.debugInfo?.endpoint || 'N/A'}</div>

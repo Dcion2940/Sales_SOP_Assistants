@@ -176,31 +176,6 @@ const flattenObjects = (input: unknown): Record<string, unknown>[] => {
 };
 
 
-const collectAllStrings = (input: unknown): string[] => {
-  const queue: unknown[] = [parseJsonIfString(input)];
-  const strings: string[] = [];
-
-  while (queue.length > 0) {
-    const current = parseJsonIfString(queue.shift());
-    if (current == null) continue;
-
-    if (typeof current === 'string') {
-      strings.push(current);
-      continue;
-    }
-
-    if (Array.isArray(current)) {
-      queue.push(...current);
-      continue;
-    }
-
-    if (typeof current === 'object') {
-      queue.push(...Object.values(current as Record<string, unknown>));
-    }
-  }
-
-  return strings;
-};
 
 const toPayloadObject = (value: unknown): BackendChatPayload | undefined => {
   if (!value || typeof value !== 'object') return undefined;
@@ -249,10 +224,7 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
     )
   );
 
-  const firstStringText = collectAllStrings(parsedPayload).find((value) => value.includes('http') || value.length > 20);
-  const resolvedText = text || (isNonEmptyString(fallbackText) ? fallbackText.trim() : '') || (isNonEmptyString(firstStringText) ? firstStringText.trim() : '');
-  const imageUrlsFromText = extractImageUrlsFromText(resolvedText);
-  const imageUrlsFromAnyString = collectAllStrings(parsedPayload).flatMap(extractImageUrlsFromText);
+  const resolvedText = text || (isNonEmptyString(fallbackText) ? fallbackText.trim() : '');
 
   return {
     text: resolvedText,
@@ -267,9 +239,7 @@ const normalizeChatPayload = (payload: unknown): { text: string; imageUrls: stri
         ...attachments,
         ...attachmentUrls,
         ...media,
-        ...nestedImageUrls,
-        ...imageUrlsFromText,
-        ...imageUrlsFromAnyString
+        ...nestedImageUrls
       ])
     )
   };
@@ -285,7 +255,7 @@ export async function sendMessageToBot(
   userInput: string,
   history: ChatHistory[],
   systemInstruction: string,
-  sopKnowledge: SOPSection[],
+  _sopKnowledge: SOPSection[],
   conversationId: string
 ): Promise<{ text: string; imageUrls: string[]; debugInfo?: { endpoint?: string; rawResponse?: string; normalizedImageUrls?: string[]; imageUrlEchoText?: string; probeReport?: string } }> {
   try {
@@ -339,26 +309,8 @@ export async function sendMessageToBot(
     const rawResponse = bestCandidate.rawResponse;
     const normalizedResponse = bestCandidate.normalized;
     const responseText = normalizedResponse.text;
-    const rawResponseImageUrls = extractImageUrlsFromText(rawResponse);
-
-    // Frontend Logic: Extract Images based on Keywords (as requested to keep)
-    // The backend provides the context, so the model should output keywords.
-    // We match against `sopKnowledge` (which is now likely capable of holding signed URLs from the get go)
-    const foundImageUrls: string[] = [];
-
-    // Note: sopKnowledge comes from StorageManager which syncs with backend /api/sop/current
-    // So it should have the latest images and keywords.
-    sopKnowledge.forEach(section => {
-      section.images?.forEach(img => {
-        const escapedKeyword = img.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedKeyword, 'i');
-        if (regex.test(responseText)) {
-          if (img.url) foundImageUrls.push(img.url);
-        }
-      });
-    });
-
-    const finalImageUrls = Array.from(new Set([...normalizedResponse.imageUrls, ...rawResponseImageUrls, ...foundImageUrls]));
+    // Product decision: image source must come only from backend `imageUrls` payload fields.
+    const finalImageUrls = Array.from(new Set([...normalizedResponse.imageUrls]));
 
     return {
       text: responseText,
