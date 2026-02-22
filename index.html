@@ -38,33 +38,20 @@
 }
 </script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
+    <script>
+      (function () {
+        const isGh = window.location.hostname === 'dcion2940.github.io';
+        const rootA = '/Sales_SOP_Assistants';
+        const rootB = '/Sales_SOP_Assistants/';
+        if (isGh && (window.location.pathname === rootA || window.location.pathname === rootB)) {
+          window.location.replace('/Sales_SOP_Assistants/dist/' + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module">
-      const isGitHubPagesHost = window.location.hostname === 'dcion2940.github.io';
-      const projectBase = '/Sales_SOP_Assistants/';
-      const projectDist = '/Sales_SOP_Assistants/dist/';
-
-      // normalize trailing slash: '/Sales_SOP_Assistants' -> '/Sales_SOP_Assistants/'
-      const normalizedPath = window.location.pathname.replace(/\/+$/, '/');
-
-      let shouldLoadApp = true;
-
-      if (isGitHubPagesHost) {
-        const inProject = normalizedPath === projectBase || normalizedPath.startsWith(projectBase);
-        const inDist = normalizedPath.startsWith(projectDist);
-
-        if (inProject && !inDist) {
-          shouldLoadApp = false;
-          window.location.replace(projectDist);
-        }
-      }
-
-      if (shouldLoadApp) {
-        import('./index.tsx');
-      }
-    </script>
+    <script type="module" src="./index.tsx"></script>
 
 </body>
 </html>
